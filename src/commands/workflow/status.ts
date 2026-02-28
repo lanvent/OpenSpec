@@ -64,11 +64,12 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
 
 export function printStatusText(status: ChangeStatus): void {
   const doneCount = status.artifacts.filter((a) => a.status === 'done').length;
+  const skippedCount = status.artifacts.filter((a) => a.status === 'skipped').length;
   const total = status.artifacts.length;
 
   console.log(`Change: ${status.changeName}`);
   console.log(`Schema: ${status.schemaName}`);
-  console.log(`Progress: ${doneCount}/${total} artifacts complete`);
+  console.log(`Progress: ${doneCount}/${total} artifacts complete${skippedCount > 0 ? ` (${skippedCount} skipped)` : ''}`);
   console.log();
 
   for (const artifact of status.artifacts) {

@@ -139,6 +139,7 @@ describe('readChangeMetadata', () => {
     expect(result).toEqual({
       schema: 'spec-driven',
       created: '2025-01-05',
+      skipped: [],
     });
   });
 

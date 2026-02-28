@@ -49,6 +49,9 @@ export const ChangeMetadataSchema = z.object({
       message: 'created must be YYYY-MM-DD format',
     })
     .optional(),
+
+  // Optional: artifact IDs to skip (treated as completed for dependency resolution)
+  skipped: z.array(z.string()).default([]),
 });
 
 export type ChangeMetadata = z.infer<typeof ChangeMetadataSchema>;

@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import { getSchemaDir, resolveSchema } from './resolver.js';
 import { ArtifactGraph } from './graph.js';
 import { detectCompleted } from './state.js';
-import { resolveSchemaForChange } from '../../utils/change-metadata.js';
+import { resolveSchemaForChange, readChangeMetadata } from '../../utils/change-metadata.js';
 import { readProjectConfig, validateConfigRules } from '../project-config.js';
 import type { Artifact, CompletedSet } from './types.js';
 
@@ -29,8 +29,10 @@ export class TemplateLoadError extends Error {
 export interface ChangeContext {
   /** The artifact dependency graph */
   graph: ArtifactGraph;
-  /** Set of completed artifact IDs */
+  /** Set of completed artifact IDs (includes skipped) */
   completed: CompletedSet;
+  /** Set of skipped artifact IDs */
+  skipped: Set<string>;
   /** Schema name being used */
   schemaName: string;
   /** Change name */
@@ -93,8 +95,8 @@ export interface ArtifactStatus {
   id: string;
   /** Output path pattern */
   outputPath: string;
-  /** Status: done, ready, or blocked */
-  status: 'done' | 'ready' | 'blocked';
+  /** Status: done, ready, blocked, or skipped */
+  status: 'done' | 'ready' | 'blocked' | 'skipped';
   /** Missing dependencies (only for blocked) */
   missingDeps?: string[];
 }
@@ -180,13 +182,18 @@ export function loadChangeContext(
   // Resolve schema: explicit > metadata > default
   const resolvedSchemaName = resolveSchemaForChange(changeDir, schemaName);
 
+  // Read skipped artifacts from metadata
+  const metadata = readChangeMetadata(changeDir, projectRoot);
+  const skippedIds = new Set(metadata?.skipped ?? []);
+
   const schema = resolveSchema(resolvedSchemaName, projectRoot);
   const graph = ArtifactGraph.fromSchema(schema);
-  const completed = detectCompleted(graph, changeDir);
+  const completed = detectCompleted(graph, changeDir, skippedIds);
 
   return {
     graph,
     completed,
+    skipped: skippedIds,
     schemaName: resolvedSchemaName,
     changeName,
     changeDir,
@@ -324,6 +331,14 @@ export function formatChangeStatus(context: ChangeContext): ChangeStatus {
   const blocked = context.graph.getBlocked(context.completed);
 
   const artifactStatuses: ArtifactStatus[] = artifacts.map(artifact => {
+    if (context.skipped.has(artifact.id)) {
+      return {
+        id: artifact.id,
+        outputPath: artifact.generates,
+        status: 'skipped' as const,
+      };
+    }
+
     if (context.completed.has(artifact.id)) {
       return {
         id: artifact.id,

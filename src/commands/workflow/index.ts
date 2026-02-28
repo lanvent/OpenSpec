@@ -19,4 +19,7 @@ export type { SchemasOptions } from './schemas.js';
 export { newChangeCommand } from './new-change.js';
 export type { NewChangeOptions } from './new-change.js';
 
+export { skipCommand, unskipCommand } from './skip.js';
+export type { SkipOptions } from './skip.js';
+
 export { DEFAULT_SCHEMA } from './shared.js';

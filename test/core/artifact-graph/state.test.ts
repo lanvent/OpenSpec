@@ -295,5 +295,52 @@ describe('artifact-graph/state', () => {
 
       expect(completed.has('single')).toBe(true);
     });
+
+    // ── Skipped artifacts ────────────────────────────────────────────────
+
+    it('should include skipped artifacts in completed set', () => {
+      const schema = createSchema([
+        { id: 'survey', generates: 'survey.md', description: 'Survey', template: 't.md', requires: [] },
+        { id: 'ideation', generates: 'ideas.md', description: 'Ideation', template: 't.md', requires: ['survey'] },
+      ]);
+      const graph = ArtifactGraph.fromSchema(schema);
+
+      // No files exist, but survey is skipped
+      const skipped = new Set(['survey']);
+      const completed = detectCompleted(graph, tempDir, skipped);
+
+      expect(completed.has('survey')).toBe(true);
+      expect(completed.has('ideation')).toBe(false);
+    });
+
+    it('should unblock downstream artifacts when dependency is skipped', () => {
+      const schema = createSchema([
+        { id: 'survey', generates: 'survey.md', description: 'Survey', template: 't.md', requires: [] },
+        { id: 'ideation', generates: 'ideas.md', description: 'Ideation', template: 't.md', requires: ['survey'] },
+      ]);
+      const graph = ArtifactGraph.fromSchema(schema);
+
+      // survey is skipped, ideation file exists
+      fs.writeFileSync(path.join(tempDir, 'ideas.md'), 'content');
+      const skipped = new Set(['survey']);
+      const completed = detectCompleted(graph, tempDir, skipped);
+
+      expect(completed.has('survey')).toBe(true);
+      expect(completed.has('ideation')).toBe(true);
+    });
+
+    it('should work with no skipped set (backward compatible)', () => {
+      const schema = createSchema([
+        { id: 'a', generates: 'a.md', description: 'A', template: 't.md', requires: [] },
+      ]);
+      const graph = ArtifactGraph.fromSchema(schema);
+
+      fs.writeFileSync(path.join(tempDir, 'a.md'), 'content');
+
+      // No skipped argument
+      const completed = detectCompleted(graph, tempDir);
+
+      expect(completed.has('a')).toBe(true);
+    });
   });
 });

@@ -154,6 +154,7 @@ export async function createChange(
   writeChangeMetadata(changeDir, {
     schema: schemaName,
     created: today,
+    skipped: [],
   }, projectRoot);
 
   return { schema: schemaName };

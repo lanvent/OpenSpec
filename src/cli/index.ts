@@ -23,12 +23,15 @@ import {
   templatesCommand,
   schemasCommand,
   newChangeCommand,
+  skipCommand,
+  unskipCommand,
   DEFAULT_SCHEMA,
   type StatusOptions,
   type InstructionsOptions,
   type TemplatesOptions,
   type SchemasOptions,
   type NewChangeOptions,
+  type SkipOptions,
 } from '../commands/workflow/index.js';
 import { maybeShowTelemetryNotice, trackCommand, shutdown } from '../telemetry/index.js';
 
@@ -429,6 +432,38 @@ program
   .action(async (options: StatusOptions) => {
     try {
       await statusCommand(options);
+    } catch (error) {
+      console.log();
+      ora().fail(`Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+// Skip command
+program
+  .command('skip <artifact...>')
+  .description('Skip one or more artifacts (treated as completed for dependency resolution)')
+  .option('--change <id>', 'Change name')
+  .option('--schema <name>', 'Schema override')
+  .action(async (artifactIds: string[], options: SkipOptions) => {
+    try {
+      await skipCommand(artifactIds, options);
+    } catch (error) {
+      console.log();
+      ora().fail(`Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+// Unskip command
+program
+  .command('unskip <artifact...>')
+  .description('Remove skip status from one or more artifacts')
+  .option('--change <id>', 'Change name')
+  .option('--schema <name>', 'Schema override')
+  .action(async (artifactIds: string[], options: SkipOptions) => {
+    try {
+      await unskipCommand(artifactIds, options);
     } catch (error) {
       console.log();
       ora().fail(`Error: ${(error as Error).message}`);
