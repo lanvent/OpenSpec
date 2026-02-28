@@ -170,5 +170,130 @@ describe('artifact-graph/state', () => {
       expect(completed.has('design')).toBe(false);
       expect(completed.has('tasks')).toBe(false);
     });
+
+    // ── Comma-separated generates ──────────────────────────────────────────
+
+    it('should mark comma-separated generates complete when ALL parts exist', () => {
+      const schema = createSchema([
+        {
+          id: 'survey',
+          generates: 'survey_report.md, references/**',
+          description: 'Survey',
+          template: 't.md',
+          requires: [],
+        },
+      ]);
+      const graph = ArtifactGraph.fromSchema(schema);
+
+      // Create both outputs
+      fs.writeFileSync(path.join(tempDir, 'survey_report.md'), 'content');
+      fs.mkdirSync(path.join(tempDir, 'references'), { recursive: true });
+      fs.writeFileSync(path.join(tempDir, 'references', 'paper-001.md'), 'content');
+
+      const completed = detectCompleted(graph, tempDir);
+
+      expect(completed.has('survey')).toBe(true);
+    });
+
+    it('should NOT mark comma-separated generates complete when only first part exists', () => {
+      const schema = createSchema([
+        {
+          id: 'survey',
+          generates: 'survey_report.md, references/**',
+          description: 'Survey',
+          template: 't.md',
+          requires: [],
+        },
+      ]);
+      const graph = ArtifactGraph.fromSchema(schema);
+
+      // Only the file exists, no references/
+      fs.writeFileSync(path.join(tempDir, 'survey_report.md'), 'content');
+
+      const completed = detectCompleted(graph, tempDir);
+
+      expect(completed.has('survey')).toBe(false);
+    });
+
+    it('should NOT mark comma-separated generates complete when only glob part exists', () => {
+      const schema = createSchema([
+        {
+          id: 'survey',
+          generates: 'survey_report.md, references/**',
+          description: 'Survey',
+          template: 't.md',
+          requires: [],
+        },
+      ]);
+      const graph = ArtifactGraph.fromSchema(schema);
+
+      // Only references/ exists, no survey_report.md
+      fs.mkdirSync(path.join(tempDir, 'references'), { recursive: true });
+      fs.writeFileSync(path.join(tempDir, 'references', 'paper-001.md'), 'content');
+
+      const completed = detectCompleted(graph, tempDir);
+
+      expect(completed.has('survey')).toBe(false);
+    });
+
+    it('should handle three-part comma-separated generates', () => {
+      const schema = createSchema([
+        {
+          id: 'ideation',
+          generates: 'drafts/**, idea_index.md, proposals/**',
+          description: 'Ideation',
+          template: 't.md',
+          requires: [],
+        },
+      ]);
+      const graph = ArtifactGraph.fromSchema(schema);
+
+      // Create all three parts
+      fs.mkdirSync(path.join(tempDir, 'drafts'), { recursive: true });
+      fs.writeFileSync(path.join(tempDir, 'drafts', 'round_01.md'), 'content');
+      fs.writeFileSync(path.join(tempDir, 'idea_index.md'), 'content');
+      fs.mkdirSync(path.join(tempDir, 'proposals'), { recursive: true });
+      fs.writeFileSync(path.join(tempDir, 'proposals', 'IDEA-001.md'), 'content');
+
+      const completed = detectCompleted(graph, tempDir);
+
+      expect(completed.has('ideation')).toBe(true);
+    });
+
+    it('should NOT mark three-part generates complete when middle part missing', () => {
+      const schema = createSchema([
+        {
+          id: 'ideation',
+          generates: 'drafts/**, idea_index.md, proposals/**',
+          description: 'Ideation',
+          template: 't.md',
+          requires: [],
+        },
+      ]);
+      const graph = ArtifactGraph.fromSchema(schema);
+
+      // Missing idea_index.md
+      fs.mkdirSync(path.join(tempDir, 'drafts'), { recursive: true });
+      fs.writeFileSync(path.join(tempDir, 'drafts', 'round_01.md'), 'content');
+      fs.mkdirSync(path.join(tempDir, 'proposals'), { recursive: true });
+      fs.writeFileSync(path.join(tempDir, 'proposals', 'IDEA-001.md'), 'content');
+
+      const completed = detectCompleted(graph, tempDir);
+
+      expect(completed.has('ideation')).toBe(false);
+    });
+
+    it('should treat single-item generates same as before (no regression)', () => {
+      const schema = createSchema([
+        { id: 'single', generates: 'output.md', description: 'Single', template: 't.md', requires: [] },
+      ]);
+      const graph = ArtifactGraph.fromSchema(schema);
+
+      fs.writeFileSync(path.join(tempDir, 'output.md'), 'content');
+
+      const completed = detectCompleted(graph, tempDir);
+
+      expect(completed.has('single')).toBe(true);
+    });
   });
 });

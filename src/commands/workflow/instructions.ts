@@ -242,6 +242,13 @@ function parseTasksFile(content: string): TaskItem[] {
  * Supports glob patterns (e.g., "specs/*.md") by verifying at least one matching file exists.
  */
 function artifactOutputExists(changeDir: string, generates: string): boolean {
+  // Handle comma-separated generates (e.g. "a.md, b/**")
+  // All parts must exist for the artifact to be considered present.
+  const parts = generates.split(',').map(p => p.trim()).filter(Boolean);
+  if (parts.length > 1) {
+    return parts.every(part => artifactOutputExists(changeDir, part));
+  }
+
   // Normalize the generates path to use platform-specific separators
   const normalizedGenerates = generates.split('/').join(path.sep);
   const fullPath = path.join(changeDir, normalizedGenerates);

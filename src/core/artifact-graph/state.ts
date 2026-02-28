@@ -32,18 +32,21 @@ export function detectCompleted(graph: ArtifactGraph, changeDir: string): Comple
 
 /**
  * Checks if an artifact is complete by checking if its generated file(s) exist.
- * Supports both simple paths and glob patterns.
+ * Supports comma-separated lists (e.g. "a.md, b/**"), simple paths, and glob patterns.
+ * All parts must match for the artifact to be considered complete.
  */
 function isArtifactComplete(generates: string, changeDir: string): boolean {
-  const fullPattern = path.join(changeDir, generates);
+  const parts = generates.split(',').map(p => p.trim()).filter(Boolean);
 
-  // Check if it's a glob pattern
-  if (isGlobPattern(generates)) {
-    return hasGlobMatches(fullPattern);
-  }
+  return parts.every(part => {
+    const fullPattern = path.join(changeDir, part);
 
-  // Simple file path - check if file exists
-  return fs.existsSync(fullPattern);
+    if (isGlobPattern(part)) {
+      return hasGlobMatches(fullPattern);
+    }
+
+    return fs.existsSync(fullPattern);
+  });
 }
 
 /**
