@@ -52,7 +52,7 @@ export const ChangeMetadataSchema = z.object({
 
   // Optional: artifact IDs to skip (treated as completed for dependency resolution)
   skipped: z.array(z.string()).default([]),
-});
+}).passthrough(); // Preserve unknown fields from user YAML
 
 export type ChangeMetadata = z.infer<typeof ChangeMetadataSchema>;
 
