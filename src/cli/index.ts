@@ -25,6 +25,7 @@ import {
   newChangeCommand,
   skipCommand,
   unskipCommand,
+  archiveArtsCommand,
   DEFAULT_SCHEMA,
   type StatusOptions,
   type InstructionsOptions,
@@ -32,6 +33,7 @@ import {
   type SchemasOptions,
   type NewChangeOptions,
   type SkipOptions,
+  type ArchiveArtsOptions,
 } from '../commands/workflow/index.js';
 import { maybeShowTelemetryNotice, trackCommand, shutdown } from '../telemetry/index.js';
 
@@ -464,6 +466,24 @@ program
   .action(async (artifactIds: string[], options: SkipOptions) => {
     try {
       await unskipCommand(artifactIds, options);
+    } catch (error) {
+      console.log();
+      ora().fail(`Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+// Archive-arts command
+program
+  .command('archive-arts <artifact>')
+  .description('Archive artifact outputs and cascade to transitive dependents')
+  .option('--change <id>', 'Change name')
+  .option('--schema <name>', 'Schema override')
+  .option('--no-cascade', 'Only archive the specified artifact (skip transitive dependents)')
+  .option('--msg <text>', 'Reason for archiving', 'manual trigger')
+  .action(async (artifactId: string, options: ArchiveArtsOptions) => {
+    try {
+      await archiveArtsCommand(artifactId, options);
     } catch (error) {
       console.log();
       ora().fail(`Error: ${(error as Error).message}`);
